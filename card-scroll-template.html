@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Polished Interactive Science Cards</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            /* Light Mode Defaults */
+            --bg-color: #f3f4f6;
+            --text-color: #1f2937;
+            --card-bg-color: rgba(255, 255, 255, 0.7);
+            --control-bg-color: rgba(255, 255, 255, 0.8);
+            --control-text-color: #374151;
+            --dot-bg-color: rgba(0, 0, 0, 0.2);
+            --dot-active-bg-color: #000000;
+        }
+
+        /* Dark Mode Overrides */
+        html.dark-mode {
+            --bg-color: #111827;
+            --text-color: #f3f4f6;
+            --card-bg-color: rgba(31, 41, 55, 0.8);
+            --control-bg-color: rgba(31, 41, 55, 0.8);
+            --control-text-color: #ffffff;
+            --dot-bg-color: rgba(255, 255, 255, 0.3);
+            --dot-active-bg-color: #ffffff;
+        }
+
+        body {
+            height: 720vh; /* Set dynamically by JS */
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: background-color 0.8s ease, color 0.8s ease;
+        }
+
+        .progress-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 4px;
+            background-color: #3b82f6;
+            width: 0%;
+            z-index: 100;
+            transition: width 0.1s linear;
+        }
+
+        .scroll-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            perspective: 800px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .card-stack {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transform-style: preserve-3d;
+        }
+
+        .card {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 90%;
+            max-width: 500px;
+            min-height: 300px;
+            transform-style: preserve-3d;
+            transition: transform 0.4s ease-out, opacity 0.4s ease-out;
+            backface-visibility: hidden;
+            background-color: var(--card-bg-color);
+            backdrop-filter: blur(12px);
+            border-radius: 1.5rem;
+            border: 1px solid rgba(128, 128, 128, 0.1);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+        
+        .card h2 { color: var(--text-color); }
+        .card p { color: var(--text-color); opacity: 0.9; }
+        html.dark-mode .card h2, html.dark-mode .card p { color: #f3f4f6; }
+        html.dark-mode .card[data-id="neutron-star"] h2, html.dark-mode .card[data-id="neutron-star"] p { color: #1f2937; }
+
+
+        .controls-bottom-right {
+            position: fixed;
+            bottom: 1.5rem;
+            right: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            z-index: 50;
+        }
+
+        .control-btn {
+            background-color: var(--control-bg-color);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(128, 128, 128, 0.2);
+            color: var(--control-text-color);
+            width: 3.5rem;
+            height: 3.5rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.2s, color 0.3s, opacity 0.3s;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .control-btn:hover:not(:disabled) {
+            transform: scale(1.1);
+        }
+        
+        .control-btn.inactive { color: #9ca3af; }
+
+        .side-control {
+            position: fixed;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 50;
+        }
+        .side-control.left { left: 1.5rem; }
+        .side-control.right { right: 1.5rem; }
+        .side-control .control-btn { width: 4rem; height: 4rem; }
+        .control-btn:disabled {
+            opacity: 0.2;
+            cursor: not-allowed;
+            transform: scale(1);
+        }
+
+        #return-to-top {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.3s, transform 0.3s;
+            pointer-events: none;
+        }
+
+        #return-to-top.visible {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+
+        .hidden { display: none; }
+
+        #nav-dots {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 0.75rem;
+            z-index: 50;
+            padding: 0.5rem;
+            background-color: rgba(0,0,0,0.1);
+            border-radius: 999px;
+        }
+
+        .nav-dot {
+            width: 10px; height: 10px;
+            border-radius: 50%;
+            background-color: var(--dot-bg-color);
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.3s;
+        }
+        
+        .nav-dot.active {
+            background-color: var(--dot-active-bg-color);
+            transform: scale(1.3);
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="progress-bar" id="progress-bar"></div>
+
+    <div class="scroll-container">
+        <div class="card-stack" id="card-stack">
+            <!-- 24 Informative Cards -->
+            <div class="card" data-id="penicillin" data-color="#0d3c59"><h2 class="text-3xl md:text-4xl font-bold mb-4">Discovery of Penicillin</h2><p class="text-md md:text-lg max-w-md">In 1928, Alexander Fleming discovered the first true antibiotic, Penicillin, revolutionizing medicine.</p></div>
+            <div class="card" data-id="dna-helix" data-color="#401a59"><h2 class="text-3xl md:text-4xl font-bold mb-4">The DNA Double Helix</h2><p class="text-md md:text-lg max-w-md">In 1953, the double helix structure of DNA was described, unlocking the secrets of heredity.</p></div>
+            <div class="card" data-id="relativity" data-color="#591838"><h2 class="text-3xl md:text-4xl font-bold mb-4">Theory of Relativity</h2><p class="text-md md:text-lg max-w-md">Einstein's theory reshaped our understanding of space, time, gravity, and the universe.</p></div>
+            <div class="card" data-id="cosmic-background" data-color="#594f18"><h2 class="text-3xl md:text-4xl font-bold mb-4">Cosmic Microwave Background</h2><p class="text-md md:text-lg max-w-md">Discovered in 1965, this faint radiation is critical evidence for the Big Bang theory.</p></div>
+            <div class="card" data-id="octopus-brains" data-color="#1a3a59"><h2 class="text-3xl md:text-4xl font-bold mb-4">Octopus Intelligence</h2><p class="text-md md:text-lg max-w-md">An octopus has nine brains and three hearts. Its blood is blue because it uses a copper-based protein for oxygen transport.</p></div>
+            <div class="card" data-id="immortal-honey" data-color="#b08000"><h2 class="text-3xl md:text-4xl font-bold mb-4">Eternal Honey</h2><p class="text-md md:text-lg max-w-md">Honey never spoils. Archaeologists have found pots of honey in ancient Egyptian tombs that are over 3,000 years old and still perfectly edible.</p></div>
+            <div class="card" data-id="mars-volcano" data-color="#c23b22"><h2 class="text-3xl md:text-4xl font-bold mb-4">Olympus Mons</h2><p class="text-md md:text-lg max-w-md">Mars is home to the largest volcano in the solar system, Olympus Mons. It's three times the height of Mount Everest.</p></div>
+            <div class="card" data-id="banana-berry" data-color="#f2c04e"><h2 class="text-3xl md:text-4xl font-bold mb-4">Botanical Confusion</h2><p class="text-md md:text-lg max-w-md">In botanical terms, bananas are classified as berries, while strawberries are not.</p></div>
+            <div class="card" data-id="ancient-sharks" data-color="#2c5b7a"><h2 class="text-3xl md:text-4xl font-bold mb-4">Sharks vs. Trees</h2><p class="text-md md:text-lg max-w-md">Sharks have existed for about 450 million years, making them older than trees, which appeared around 350 million years ago.</p></div>
+            <div class="card" data-id="cleopatra-time" data-color="#a47d43"><h2 class="text-3xl md:text-4xl font-bold mb-4">Cleopatra's Timeline</h2><p class="text-md md:text-lg max-w-md">Cleopatra lived closer in time to the first iPhone release than to the construction of the Great Pyramid of Giza.</p></div>
+            <div class="card" data-id="hummingbird-fuel" data-color="#55a8a4"><h2 class="text-3xl md:text-4xl font-bold mb-4">Hummingbird Metabolism</h2><p class="text-md md:text-lg max-w-md">A hummingbird's heart beats up to 1,260 times per minute. They must consume about half their body weight in sugar daily to survive.</p></div>
+            <div class="card" data-id="silent-space" data-color="#1e1e2f"><h2 class="text-3xl md:text-4xl font-bold mb-4">The Sound of Silence</h2><p class="text-md md:text-lg max-w-md">Space is completely silent. With no atmosphere, there is no medium for sound waves to travel through.</p></div>
+            <div class="card" data-id="shortest-war" data-color="#6d6d6d"><h2 class="text-3xl md:text-4xl font-bold mb-4">The Shortest War</h2><p class="text-md md:text-lg max-w-md">The shortest war in history was between Britain and Zanzibar in 1896. Zanzibar surrendered after just 38 minutes.</p></div>
+            <div class="card" data-id="algae-sloth" data-color="#4a6b53"><h2 class="text-3xl md:text-4xl font-bold mb-4">Mobile Ecosystem</h2><p class="text-md md:text-lg max-w-md">Sloths move so slowly that algae can grow on their fur, which helps camouflage them in the treetops.</p></div>
+            <div class="card" data-id="diamond-rain" data-color="#a9d6e5"><h2 class="text-3xl md:text-4xl font-bold mb-4">Diamond Rain</h2><p class="text-md md:text-lg max-w-md">Atmospheric data for Saturn and Jupiter suggests that it could rain solid diamonds on these gas giants.</p></div>
+            <div class="card" data-id="oxford-aztec" data-color="#482622"><h2 class="text-3xl md:text-4xl font-bold mb-4">Ancient University</h2><p class="text-md md:text-lg max-w-md">Oxford University in England is older than the Aztec Empire. Teaching started there as early as 1096.</p></div>
+            <div class="card" data-id="banana-dna" data-color="#d4a22f"><h2 class="text-3xl md:text-4xl font-bold mb-4">You're Half Banana</h2><p class="text-md md:text-lg max-w-md">Humans share about 60% of their DNA with bananas, highlighting our common ancestry with all life on Earth.</p></div>
+            <div class="card" data-id="dino-gap" data-color="#7a5c4f"><h2 class="text-3xl md:text-4xl font-bold mb-4">Dinosaur Time Gap</h2><p class="text-md md:text-lg max-w-md">The time separating Stegosaurus and T-Rex is greater than the time separating T-Rex and humans.</p></div>
+            <div class="card" data-id="earth-slows" data-color="#3d5a80"><h2 class="text-3xl md:text-4xl font-bold mb-4">Slowing Earth</h2><p class="text-md md:text-lg max-w-md">The Earth's rotation is gradually slowing down at a rate of about 1.8 milliseconds per century, causing our days to get longer.</p></div>
+            <div class="card" data-id="wombat-cubes" data-color="#8c6d62"><h2 class="text-3xl md:text-4xl font-bold mb-4">Cubed Poop</h2><p class="text-md md:text-lg max-w-md">Wombats are the only known species to produce cube-shaped feces, which they use to mark their territory.</p></div>
+            <div class="card" data-id="neutron-star" data-color="#e0fbfc"><h2 class="text-3xl md:text-4xl font-bold mb-4">Neutron Stars</h2><p class="text-md md:text-lg max-w-md">Neutron stars are so dense that a single teaspoon of their material would weigh about 6 billion tons on Earth.</p></div>
+            <div class="card" data-id="internet-weight" data-color="#ff6b6b"><h2 class="text-3xl md:text-4xl font-bold mb-4">Weight of the Internet</h2><p class="text-md md:text-lg max-w-md">The total weight of all the electrons in motion that make up the internet at any given moment is estimated to be about 50 grams, the weight of a strawberry.</p></div>
+            <div class="card" data-id="great-wall-myth" data-color="#a1a1aa"><h2 class="text-3xl md:text-4xl font-bold mb-4">Great Wall Myth</h2><p class="text-md md:text-lg max-w-md">The Great Wall of China is not visible from the Moon with the naked eye. This is a common misconception.</p></div>
+             <div class="card" data-id="water-atoms" data-color="#3a86ff"><h2 class="text-3xl md:text-4xl font-bold mb-4">Atoms in Water</h2><p class="text-md md:text-lg max-w-md">A single glass of water contains more H₂O molecules than there are glasses of water in all the Earth's oceans combined.</p></div>
+        </div>
+    </div>
+    
+    <div class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-white text-center pointer-events-none" id="scroll-prompt">
+        <div class="bg-black bg-opacity-70 p-4 rounded-lg"><p class="text-2xl font-bold animate-pulse">Scroll or Use Arrow Keys</p></div>
+    </div>
+
+    <!-- Side Nav Controls -->
+    <div class="side-control left"><button id="prev-btn" class="control-btn" aria-label="Previous Card"><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg></button></div>
+    <div class="side-control right"><button id="next-btn" class="control-btn" aria-label="Next Card"><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg></button></div>
+
+    <div id="nav-dots"></div>
+
+    <div class="controls-bottom-right">
+        <button id="light-dark-btn" class="control-btn" aria-label="Toggle Light/Dark Mode"><svg id="sun-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg><svg id="moon-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="hidden"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg></button>
+        <button id="theme-toggle-btn" class="control-btn" aria-label="Toggle Thematic Background"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0L12 2.69z"></path><path d="M12 22.31V12"></path></svg></button>
+        <button id="play-pause-btn" class="control-btn" aria-label="Play or Pause Auto-Scroll"><svg id="play-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg><svg id="pause-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="hidden"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="16"></rect></svg></button>
+        <button id="return-to-top" class="control-btn" aria-label="Return to Top"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg></button>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- DOM Element Selection ---
+            const docRoot = document.documentElement;
+            const docBody = document.body;
+            const cards = Array.from(document.querySelectorAll('.card'));
+            const navDotsContainer = document.getElementById('nav-dots');
+            const progressBar = document.getElementById('progress-bar');
+            const returnToTopBtn = document.getElementById('return-to-top');
+            const playPauseBtn = document.getElementById('play-pause-btn');
+            const playIcon = document.getElementById('play-icon');
+            const pauseIcon = document.getElementById('pause-icon');
+            const themeToggleBtn = document.getElementById('theme-toggle-btn');
+            const lightDarkBtn = document.getElementById('light-dark-btn');
+            const sunIcon = document.getElementById('sun-icon');
+            const moonIcon = document.getElementById('moon-icon');
+            const scrollPrompt = document.getElementById('scroll-prompt');
+            const prevBtn = document.getElementById('prev-btn');
+            const nextBtn = document.getElementById('next-btn');
+
+            // --- State & Config ---
+            const numCards = cards.length;
+            const scrollFactor = 30; // Each card takes 30vh of scroll space
+            let currentCardIndex = -1;
+            let isAutoScrolling = false;
+            let autoScrollInterval;
+            let isThemingEnabled = true;
+            let scrollTimeout;
+            let isProgrammaticScroll = false; // Master flag for any non-user scroll
+
+            // --- Initial Setup ---
+            function initialize() {
+                docBody.style.height = `${numCards * scrollFactor}vh`;
+                setupNavDots();
+                initTheme();
+                handleInitialLoad();
+                addEventListeners();
+            }
+
+            // --- Core Animation & Update Loop ---
+            function masterUpdateLoop() {
+                const scrollTop = window.scrollY;
+                const scrollHeight = docBody.scrollHeight - window.innerHeight;
+                const scrollProgress = scrollHeight > 0 ? scrollTop / scrollHeight : 0;
+                
+                updateProgressBar(scrollProgress);
+                updateCardPositions(scrollProgress);
+                updateActiveCard(scrollProgress);
+                updateReturnToTopButton(scrollTop);
+                hideScrollPrompt(scrollTop);
+            }
+            
+            function updateProgressBar(progress) { progressBar.style.width = `${progress * 100}%`; }
+
+            function updateCardPositions(scrollProgress) {
+                cards.forEach((card, i) => {
+                    const cardStartProgress = i / numCards;
+                    const progressWithinCard = (scrollProgress - cardStartProgress) * numCards;
+                    const zPos = -Math.max(0, progressWithinCard) * 150;
+                    const scale = 1 - Math.max(0, progressWithinCard) * 0.2;
+                    const transform = `translate(-50%, -50%) translateZ(${zPos}px) rotateX(0deg) scale(${scale})`;
+                    const opacity = Math.max(0, 1 - Math.abs(progressWithinCard));
+                    card.style.transform = transform;
+                    card.style.opacity = opacity ** 3;
+                });
+            }
+
+            function updateActiveCard(scrollProgress) {
+                const newCardIndex = Math.round(scrollProgress * numCards);
+                if (newCardIndex !== currentCardIndex && newCardIndex < numCards) {
+                    currentCardIndex = newCardIndex;
+                    const activeCard = cards[currentCardIndex];
+                    document.querySelectorAll('.nav-dot').forEach((dot, i) => dot.classList.toggle('active', i === currentCardIndex));
+                    if (!isProgrammaticScroll) {
+                        history.pushState(null, null, `#${activeCard.dataset.id}`);
+                    }
+                    if (isThemingEnabled) {
+                        docRoot.style.setProperty('--bg-color', activeCard.dataset.color);
+                    }
+                    updateNavButtonsState();
+                }
+            }
+
+            function updateReturnToTopButton(scrollTop) { returnToTopBtn.classList.toggle('visible', scrollTop > window.innerHeight / 2); }
+            function hideScrollPrompt(scrollTop) { if (scrollTop > 50 && scrollPrompt.style.opacity !== '0') scrollPrompt.style.opacity = '0'; }
+            
+            // --- Navigation & Feature Logic ---
+            function setupNavDots() {
+                navDotsContainer.innerHTML = '';
+                for (let i = 0; i < numCards; i++) {
+                    const dot = document.createElement('button');
+                    dot.className = 'nav-dot';
+                    dot.setAttribute('aria-label', `Go to card ${i + 1}`);
+                    dot.addEventListener('click', () => scrollToCard(i));
+                    navDotsContainer.appendChild(dot);
+                }
+            }
+
+            function scrollToCard(index, behavior = 'smooth') {
+                isProgrammaticScroll = true;
+                stopAutoScroll();
+                const targetScrollY = (index / numCards) * (docBody.scrollHeight - window.innerHeight);
+                docRoot.style.scrollBehavior = behavior;
+                window.scrollTo(0, targetScrollY);
+                
+                // Use a reliable method to know when scrolling has likely finished
+                const checkScrollEnd = setInterval(() => {
+                    if (Math.abs(window.scrollY - targetScrollY) < 1) {
+                        clearInterval(checkScrollEnd);
+                        docRoot.style.scrollBehavior = 'smooth';
+                        isProgrammaticScroll = false;
+                    }
+                }, 100);
+
+                // Fallback timeout
+                setTimeout(() => {
+                    clearInterval(checkScrollEnd);
+                    docRoot.style.scrollBehavior = 'smooth';
+                    isProgrammaticScroll = false;
+                }, 1000);
+            }
+            
+            function snapToNearestCard() {
+                if (isAutoScrolling || isProgrammaticScroll) return;
+                const scrollTop = window.scrollY;
+                const scrollHeight = docBody.scrollHeight - window.innerHeight;
+                const scrollProgress = scrollTop / scrollHeight;
+                const targetIndex = Math.round(scrollProgress * numCards);
+                const targetScrollY = (targetIndex / numCards) * scrollHeight;
+                if (Math.abs(scrollTop - targetScrollY) > 5) {
+                    scrollToCard(targetIndex, 'smooth');
+                }
+            }
+            
+            function updateNavButtonsState() {
+                prevBtn.disabled = currentCardIndex === 0;
+                nextBtn.disabled = currentCardIndex === numCards - 1;
+            }
+
+            function handleKeyDown(e) {
+                if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+                let targetIndex = currentCardIndex;
+                if (e.key === 'ArrowRight' && currentCardIndex < numCards - 1) targetIndex++;
+                else if (e.key === 'ArrowLeft' && currentCardIndex > 0) targetIndex--;
+                if(targetIndex !== currentCardIndex) scrollToCard(targetIndex);
+            }
+            
+            function handleInitialLoad() {
+                const hash = window.location.hash.substring(1);
+                const targetIndex = cards.findIndex(card => card.dataset.id === hash);
+                const initialIndex = targetIndex !== -1 ? targetIndex : 0;
+                scrollToCard(initialIndex, 'auto');
+                setTimeout(masterUpdateLoop, 50);
+            }
+
+            function startAutoScroll() {
+                if (isAutoScrolling) return;
+                isProgrammaticScroll = true; isAutoScrolling = true;
+                playIcon.classList.add('hidden'); pauseIcon.classList.remove('hidden');
+                autoScrollInterval = setInterval(() => {
+                    if (window.scrollY >= docBody.scrollHeight - window.innerHeight - 1) {
+                        stopAutoScroll();
+                    } else {
+                        window.scrollBy(0, 2);
+                    }
+                }, 16);
+            }
+
+            function stopAutoScroll() {
+                if (!isAutoScrolling) return;
+                isProgrammaticScroll = false; isAutoScrolling = false;
+                clearInterval(autoScrollInterval);
+                playIcon.classList.remove('hidden'); pauseIcon.classList.add('hidden');
+            }
+            
+            function toggleColoredTheming() {
+                isThemingEnabled = !isThemingEnabled;
+                themeToggleBtn.classList.toggle('inactive', !isThemingEnabled);
+                if (isThemingEnabled && currentCardIndex > -1) {
+                    docRoot.style.setProperty('--bg-color', cards[currentCardIndex].dataset.color);
+                } else {
+                    const isDarkMode = docRoot.classList.contains('dark-mode');
+                    docRoot.style.setProperty('--bg-color', isDarkMode ? '#111827' : '#f3f4f6');
+                }
+            }
+            
+            function initTheme() {
+                const savedTheme = localStorage.getItem('theme');
+                const isDarkMode = savedTheme === 'dark';
+                docRoot.classList.toggle('dark-mode', isDarkMode);
+                sunIcon.classList.toggle('hidden', isDarkMode);
+                moonIcon.classList.toggle('hidden', !isDarkMode);
+                if (!isThemingEnabled) {
+                    toggleColoredTheming();
+                    toggleColoredTheming(); // Call twice to set correct state
+                }
+            }
+
+            function toggleLightDarkMode() {
+                docRoot.classList.toggle('dark-mode');
+                const isDarkMode = docRoot.classList.contains('dark-mode');
+                localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
+                initTheme();
+            }
+
+            // --- Event Listeners ---
+            function addEventListeners() {
+                let scrollEndTimeout;
+                window.addEventListener('scroll', () => {
+                    // Always update visuals on scroll
+                    masterUpdateLoop();
+                    // If scroll is not programmatic, handle snap logic
+                    if (!isProgrammaticScroll) {
+                        clearTimeout(scrollEndTimeout);
+                        scrollEndTimeout = setTimeout(snapToNearestCard, 150);
+                    }
+                }, { passive: true });
+
+                window.addEventListener('resize', handleInitialLoad);
+                window.addEventListener('keydown', handleKeyDown);
+                returnToTopBtn.addEventListener('click', () => scrollToCard(0));
+                playPauseBtn.addEventListener('click', () => isAutoScrolling ? stopAutoScroll() : startAutoScroll());
+                themeToggleBtn.addEventListener('click', toggleColoredTheming);
+                lightDarkBtn.addEventListener('click', toggleLightDarkMode);
+                prevBtn.addEventListener('click', () => { if(currentCardIndex > 0) scrollToCard(currentCardIndex - 1); });
+                nextBtn.addEventListener('click', () => { if(currentCardIndex < numCards - 1) scrollToCard(currentCardIndex + 1); });
+                
+                const stopManualInteraction = () => {
+                    if (isAutoScrolling) stopAutoScroll();
+                    isProgrammaticScroll = false;
+                    clearTimeout(scrollEndTimeout);
+                };
+                window.addEventListener('wheel', stopManualInteraction, { passive: true });
+                window.addEventListener('touchstart', stopManualInteraction, { passive: true });
+            }
+
+            // --- Run Application ---
+            initialize();
+        });
+    </script>
+</body>
+</html>
