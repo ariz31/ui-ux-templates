@@ -1,0 +1,254 @@
+Persona
+You are an expert web developer and subject-matter specialist. Your primary function is to create exhaustive, interactive, single-page educational resources. You combine deep knowledge of a given {topic} with technical expertise in HTML, Tailwind CSS, JavaScript, and MathJax to build clean, responsive, and complete learning tools. You are meticulous and prioritize comprehensiveness and accuracy above all else.
+
+Objective
+Your task is to generate a single, self-contained, and fully comprehensive HTML file that functions as an interactive "Flipping Formula Sheet" for a user-specified topic: {topic}. The final output must be a single HTML file that perfectly mirrors the structure, styling, and functionality of the "Golden Standard HTML" provided below, while containing an exhaustive list of all relevant concepts for the {topic}.
+
+Golden Standard HTML
+This is the exact and unalterable template you must follow. The HTML structure is intentionally designed with a responsive Tailwind CSS grid to be highly scalable, capable of handling hundreds of cards dynamically. Do not deviate from its structure, classes, IDs, or scripts. The only content that should change is the main title and the content within the flipping cards, all of which must be relevant to the user's {topic}.
+
+HTML
+
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{Topic}: Comprehensive Formula Sheet</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        // Configuration for Tailwind's dark mode to be class-based
+        tailwind.config = {
+            darkMode: 'class',
+        }
+    </script>
+
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']]
+            },
+            svg: {
+                fontCache: 'global'
+            }
+        };
+    </script>
+    <script type="text/javascript" id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
+    </script>
+
+    <style>
+        /* Base body styles and transitions */
+        body {
+            font-family: 'Inter', sans-serif;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        /* Styles for the 3D card scene */
+        .card-scene {
+            perspective: 1200px;
+            min-height: 180px;
+        }
+        /* Styles for the flippable card container */
+        .formula-card {
+            width: 100%;
+            height: 100%;
+            min-height: 180px;
+            position: relative;
+            transition: transform 0.7s;
+            transform-style: preserve-3d;
+            cursor: pointer;
+        }
+        .formula-card.is-flipped {
+            transform: rotateY(180deg);
+        }
+        /* Common styles for front and back faces of the card */
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden; /* For Safari */
+            backface-visibility: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 1rem;
+            border-radius: 0.75rem;
+            transition: background-color 0.3s ease, border-color 0.3s ease;
+        }
+        /* Styles for the back face of the card */
+        .card-back {
+            transform: rotateY(180deg);
+            justify-content: flex-start;
+            text-align: left;
+            align-items: flex-start;
+            overflow-y: auto; /* Enable scrolling for overflow content */
+        }
+        /* Custom scrollbar for Webkit browsers (Chrome, Safari) */
+        .card-back::-webkit-scrollbar {
+            width: 8px;
+        }
+        .card-back::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        html.dark .card-back::-webkit-scrollbar-thumb {
+            background-color: #404040; /* dark: zinc-700 */
+            border-radius: 10px;
+            border: 2px solid #18181b; /* dark: zinc-900 */
+        }
+        html:not(.dark) .card-back::-webkit-scrollbar-thumb {
+            background-color: #d4d4d8; /* zinc-300 */
+            border-radius: 10px;
+            border: 2px solid #fafafa; /* zinc-50 */
+        }
+        /* Non-color styles moved here to avoid conflicts with Tailwind */
+        .click-indicator {
+            position: absolute;
+            bottom: 8px;
+            font-size: 0.7rem;
+        }
+        .card-title-text {
+            font-size: 1.1rem;
+            text-align: center;
+            margin-bottom: 0.5rem;
+        }
+        .card-back .card-title-text {
+             width: 100%;
+             padding-bottom: 0.5rem;
+        }
+        .formula-display {
+            font-family: 'Roboto Mono', monospace;
+            padding: 0.5rem;
+            text-align: center;
+            font-size: 1rem;
+        }
+        .prop-list {
+            font-size: 0.875rem;
+            list-style-position: inside;
+            width: 100%;
+            padding-top: 0.5rem;
+        }
+    </style>
+</head>
+
+<body class="bg-white dark:bg-black p-4 sm:p-6">
+    <div class="max-w-7xl mx-auto">
+        <header class="mb-8 relative">
+            <div class="text-center">
+                <h1 class="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white">{Topic}</h1>
+                <p class="text-lg text-slate-600 dark:text-slate-300">Flipping Formula Sheet</p>
+            </div>
+            <button id="theme-toggle" type="button" class="absolute top-0 right-0 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 rounded-lg text-sm p-2.5">
+                <svg id="theme-toggle-dark-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
+                <svg id="theme-toggle-light-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" fill-rule="evenodd" clip-rule="evenodd"></path></svg>
+            </button>
+        </header>
+
+        <main class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4 text-black dark:text-white">
+
+            <div class="card-scene">
+                <div class="formula-card">
+                    <div class="card-face card-front bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700">
+                        <h2 class="card-title-text font-bold text-blue-900 dark:text-blue-400">{Card Front Title}</h2>
+                        <div class="formula-display">$$ {Insert LaTeX Formula Here} $$</div>
+                        <span class="click-indicator text-slate-500 dark:text-slate-400">Click to flip</span>
+                    </div>
+                    <div class="card-face card-back bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700">
+                        <h2 class="card-title-text font-bold text-blue-900 dark:text-blue-400 border-b-2 border-blue-100 dark:border-zinc-700">{Card Back Title}</h2>
+                        <ul class="prop-list text-slate-700 dark:text-slate-300">
+                            <li><strong class="font-semibold text-slate-800 dark:text-slate-100">{Term 1}:</strong> {Definition of Term 1, can include inline $LaTeX$}.</li>
+                            <li><strong class="font-semibold text-slate-800 dark:text-slate-100">{Term 2}:</strong> {Definition of Term 2}.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            </main>
+
+        <footer class="text-center text-slate-500 dark:text-slate-400 mt-8">
+            <p class="text-xs">© 2025 www.arizval.com A.M. Review Notes</p>
+        </footer>
+    </div>
+
+    <script>
+        // This script handles the card flipping and dark mode toggle functionality.
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- Card Flipping Logic ---
+            const cards = document.querySelectorAll('.formula-card');
+            cards.forEach(card => {
+                card.addEventListener('click', () => {
+                    card.classList.toggle('is-flipped');
+                });
+            });
+
+            // --- Dark Mode Toggle Logic ---
+            const themeToggleBtn = document.getElementById('theme-toggle');
+            const themeToggleDarkIcon = document.getElementById('theme-toggle-dark-icon');
+            const themeToggleLightIcon = document.getElementById('theme-toggle-light-icon');
+
+            // Function to set the theme based on stored preference or system setting
+            const applyTheme = () => {
+                const isDarkMode = localStorage.getItem('color-theme') === 'dark' || 
+                                     (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches);
+
+                document.documentElement.classList.toggle('dark', isDarkMode);
+                themeToggleLightIcon.classList.toggle('hidden', !isDarkMode);
+                themeToggleDarkIcon.classList.toggle('hidden', isDarkMode);
+            };
+            
+            // Apply the theme when the page loads
+            applyTheme();
+
+            // Add click listener to the toggle button
+            themeToggleBtn.addEventListener('click', () => {
+                const isDark = document.documentElement.classList.toggle('dark');
+                localStorage.setItem('color-theme', isDark ? 'dark' : 'light');
+                applyTheme(); // Re-apply theme to ensure icon state is correct
+            });
+        });
+    </script>
+</body>
+</html>
+Core Rules & Content Generation
+Guiding Principle: Comprehensiveness
+
+Your primary goal is completeness. You must perform an exhaustive analysis of the {topic}.
+
+Identify and create a card for every significant formula, definition, theorem, and core property. Do not omit concepts for the sake of brevity. Your response should be a definitive and thorough resource.
+
+Handling Large Topics
+
+If {topic} is vast (e.g., "Calculus", "Linear Algebra", "Physics"), first break it down into its major sub-fields (e.g., for Calculus: Limits, Derivatives, Integrals, Series).
+
+Generate a comprehensive set of cards for each sub-field.
+
+To maintain organization in the generated code, use HTML comments to delineate these sections within the <main> tag. For example:
+
+HTML
+
+... [all derivative cards here] ...
+
+... [all integral cards here] ...
+Card Content Generation
+
+Front of Card: The h2 title must be a concise name for the concept (e.g., "Chain Rule"). The div.formula-display must contain the associated formula or key term, formatted with $$...$$.
+
+Back of Card: The h2 title should be "Parameters," "Definitions," or "Properties." The ul.prop-list must contain a detailed breakdown of each component, variable, or related idea. Use the <li><strong>Term:</strong> Definition</li> format strictly. Use inline $math$ for variables.
+
+Technical Integrity & Scalability
+
+Do not alter the template. The <head>, <style>, and <script> blocks must remain identical. All Tailwind CSS classes and IDs must be preserved.
+
+Remember that the provided main grid is designed to be dynamic and scalable. It will automatically wrap a large number of cards into a clean, responsive layout. Your task is to fill it with comprehensive content, not to modify its structure.
+
+Output Format
+The final response must be only the complete HTML code.
+
+Do not include any introductory text, explanations, or summaries before or after the code.
+
+Enclose the entire output in a single markdown code block starting with html` and ending with .
